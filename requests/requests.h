@@ -7,6 +7,7 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 #include "response.h"
 #include <curl/curl.h>
@@ -18,22 +19,23 @@ typedef map<string, string> PostData;
 class Requests
 {
 public:
-    Requests();
 
-    ~Requests();
+    shared_ptr<Response> get(const string &url, const Headers &headers);
 
-    Response get(const string &url, const Headers &headers, int timeout = 30);
+    shared_ptr<Response> get(const string &url);
 
-    Response get(const string &url, int timeout = 30);
+    shared_ptr<Response> post(const string &url, const PostData &data);
 
-    Response post(const string &url, const PostData &data, int timeout = 30);
-
-    Response post(const string &url, const PostData &data, const Headers &headers, int timeout = 30);
+    shared_ptr<Response> post(const string &url, const PostData &data, const Headers &headers);
 
 private:
     struct curl_slist *headers_to_curl_headers(const Headers &headers);
 
-    CURL *curl;
+    string post_data_to_string(const PostData &post_data);
+
+    Headers parser_response_headers(const string &response_headers_str);
+
+    vector<string> string_split(const string &str, const string &sep);
 };
 
 
