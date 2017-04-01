@@ -51,6 +51,7 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers)
     struct curl_slist *curl_headers = headers_to_curl_headers(headers);
     CURL *curl = curl_easy_init();
     shared_ptr<Response> res = make_shared<Response>();
+    res->url = url;
     if (curl == NULL)
     {
         res->curl_code = -1;
@@ -62,6 +63,21 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers)
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->response_headers);
     res->curl_code = curl_easy_perform(curl);
+    if (res->curl_code == CURLE_OK)
+    {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
+        if (res->status == 302)
+        {
+            char *redirect_url = NULL;
+            curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
+            if (redirect_url != NULL)
+            {
+                curl_easy_cleanup(curl);
+                curl_slist_free_all(curl_headers);
+                return get(redirect_url, headers);
+            }
+        }
+    }
     curl_easy_cleanup(curl);
     curl_slist_free_all(curl_headers);
     return res;
@@ -71,6 +87,7 @@ shared_ptr<Response> Requests::get(const string &url)
 {
     CURL *curl = curl_easy_init();
     shared_ptr<Response> res = make_shared<Response>();
+    res->url = url;
     if (curl == NULL)
     {
         res->curl_code = -1;
@@ -81,6 +98,25 @@ shared_ptr<Response> Requests::get(const string &url)
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->response_headers);
     res->curl_code = curl_easy_perform(curl);
+    if (res->curl_code == CURLE_OK)
+    {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
+        if (res->status == 302)
+        {
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
+            if (res->status == 302)
+            {
+                char *redirect_url = NULL;
+                curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
+                if (redirect_url != NULL)
+                {
+                    curl_easy_cleanup(curl);
+                    return get(redirect_url);
+                }
+            }
+        }
+    }
     curl_easy_cleanup(curl);
     return res;
 }
@@ -89,6 +125,7 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data)
 {
     CURL *curl = curl_easy_init();
     shared_ptr<Response> res = make_shared<Response>();
+    res->url = url;
     string post_str = post_data_to_string(data);
     if (curl == NULL)
     {
@@ -101,6 +138,20 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data)
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->response_headers);
     res->curl_code = curl_easy_perform(curl);
+    if (res->curl_code == CURLE_OK)
+    {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
+        if (res->status == 302)
+        {
+            char *redirect_url = NULL;
+            curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
+            if (redirect_url != NULL)
+            {
+                curl_easy_cleanup(curl);
+                return get(redirect_url);
+            }
+        }
+    }
     curl_easy_cleanup(curl);
     return res;
 }
@@ -110,6 +161,7 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data, con
     struct curl_slist *curl_headers = headers_to_curl_headers(headers);
     CURL *curl = curl_easy_init();
     shared_ptr<Response> res = make_shared<Response>();
+    res->url = url;
     string post_str = post_data_to_string(data);
     if (curl == NULL)
     {
@@ -122,6 +174,21 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data, con
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->response_headers);
     res->curl_code = curl_easy_perform(curl);
+    if (res->curl_code == CURLE_OK)
+    {
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
+        if (res->status == 302)
+        {
+            char *redirect_url = NULL;
+            curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
+            if (redirect_url != NULL)
+            {
+                curl_easy_cleanup(curl);
+                curl_slist_free_all(curl_headers);
+                return get(redirect_url, headers);
+            }
+        }
+    }
     curl_easy_cleanup(curl);
     curl_slist_free_all(curl_headers);
     return res;

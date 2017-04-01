@@ -16,6 +16,8 @@ class Response
 public:
     string text;
     string response_headers;
+    string cookies;
+    string url;
     int curl_code;
     int status;
 };
