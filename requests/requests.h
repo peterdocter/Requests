@@ -8,6 +8,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <sstream>
 
 #include "response.h"
 #include <curl/curl.h>
@@ -20,13 +21,14 @@ class Requests
 {
 public:
 
-    shared_ptr<Response> get(const string &url, const Headers &headers);
+    shared_ptr<Response> get(const string &url, const Headers &headers, string cookies = "");
 
-    shared_ptr<Response> get(const string &url);
+    shared_ptr<Response> get(const string &url, const string &cookies = "");
 
-    shared_ptr<Response> post(const string &url, const PostData &data);
+    shared_ptr<Response> post(const string &url, const PostData &data, string cookies = "");
 
-    shared_ptr<Response> post(const string &url, const PostData &data, const Headers &headers);
+    shared_ptr<Response>
+    post(const string &url, const PostData &data, const Headers &headers, string cookies = "");
 
 private:
     struct curl_slist *headers_to_curl_headers(const Headers &headers);
@@ -35,7 +37,6 @@ private:
 
     Headers parser_response_headers(const string &response_headers_str);
 
-    vector<string> string_split(const string &str, const string &sep);
 };
 
 

@@ -44,9 +44,22 @@ string Requests::post_data_to_string(const PostData &post_data)
 Headers Requests::parser_response_headers(const string &response_headers_str)
 {
     Headers response_headers;
+    stringstream is(response_headers_str);
+    string line;
+    getline(is, line);
+    while (getline(is, line))
+    {
+        if (line.length() < 3)
+            continue;
+        line = line.substr(0, line.find("\r"));
+        string key = line.substr(0, line.find(": "));
+        string value = line.substr(line.find(": ") + 2);
+        response_headers[key] = value;
+    }
+    return response_headers;
 }
 
-shared_ptr<Response> Requests::get(const string &url, const Headers &headers)
+shared_ptr<Response> Requests::get(const string &url, const Headers &headers, string cookies)
 {
     struct curl_slist *curl_headers = headers_to_curl_headers(headers);
     CURL *curl = curl_easy_init();
@@ -59,12 +72,17 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers)
     }
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers);
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    if (cookies != "")
+    {
+        curl_easy_setopt(curl, CURLOPT_COOKIE, cookies.c_str());
+    }
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, OnWriteData);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->response_headers);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->s_response_headers);
     res->curl_code = curl_easy_perform(curl);
     if (res->curl_code == CURLE_OK)
     {
+        res->response_headers = parser_response_headers(res->s_response_headers);
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
         if (res->status == 302)
         {
@@ -74,7 +92,7 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers)
             {
                 curl_easy_cleanup(curl);
                 curl_slist_free_all(curl_headers);
-                return get(redirect_url, headers);
+                return get(redirect_url, headers, cookies);
             }
         }
     }
@@ -83,7 +101,7 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers)
     return res;
 }
 
-shared_ptr<Response> Requests::get(const string &url)
+shared_ptr<Response> Requests::get(const string &url, string cookies)
 {
     CURL *curl = curl_easy_init();
     shared_ptr<Response> res = make_shared<Response>();
@@ -94,12 +112,17 @@ shared_ptr<Response> Requests::get(const string &url)
         return res;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    if (cookies != "")
+    {
+        curl_easy_setopt(curl, CURLOPT_COOKIE, cookies.c_str());
+    }
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, OnWriteData);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->response_headers);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->s_response_headers);
     res->curl_code = curl_easy_perform(curl);
     if (res->curl_code == CURLE_OK)
     {
+        res->response_headers = parser_response_headers(res->s_response_headers);
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
         if (res->status == 302)
@@ -112,7 +135,7 @@ shared_ptr<Response> Requests::get(const string &url)
                 if (redirect_url != NULL)
                 {
                     curl_easy_cleanup(curl);
-                    return get(redirect_url);
+                    return get(redirect_url, cookies);
                 }
             }
         }
@@ -121,7 +144,7 @@ shared_ptr<Response> Requests::get(const string &url)
     return res;
 }
 
-shared_ptr<Response> Requests::post(const string &url, const PostData &data)
+shared_ptr<Response> Requests::post(const string &url, const PostData &data, string cookies)
 {
     CURL *curl = curl_easy_init();
     shared_ptr<Response> res = make_shared<Response>();
@@ -133,13 +156,19 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data)
         return res;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    if (cookies != "")
+    {
+        curl_easy_setopt(curl, CURLOPT_COOKIE, cookies.c_str());
+    }
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_str.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, OnWriteData);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->response_headers);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->s_response_headers);
+    curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "test.txt");
     res->curl_code = curl_easy_perform(curl);
     if (res->curl_code == CURLE_OK)
     {
+        res->response_headers = parser_response_headers(res->s_response_headers);
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
         if (res->status == 302)
         {
@@ -148,7 +177,7 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data)
             if (redirect_url != NULL)
             {
                 curl_easy_cleanup(curl);
-                return get(redirect_url);
+                return get(redirect_url, cookies);
             }
         }
     }
@@ -156,7 +185,8 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data)
     return res;
 }
 
-shared_ptr<Response> Requests::post(const string &url, const PostData &data, const Headers &headers)
+shared_ptr<Response>
+Requests::post(const string &url, const PostData &data, const Headers &headers, string cookies)
 {
     struct curl_slist *curl_headers = headers_to_curl_headers(headers);
     CURL *curl = curl_easy_init();
@@ -169,13 +199,24 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data, con
         return res;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    if (cookies != "")
+    {
+        curl_easy_setopt(curl, CURLOPT_COOKIE, cookies.c_str());
+    }
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post_str.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, OnWriteData);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->response_headers);
+    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->s_response_headers);
     res->curl_code = curl_easy_perform(curl);
     if (res->curl_code == CURLE_OK)
     {
+        res->response_headers = parser_response_headers(res->s_response_headers);
+        if (res->response_headers.count("Set-Cookie"))
+        {
+            res->cookies = res->response_headers["Set-Cookie"];
+        } else
+            res->cookies = cookies;
+
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
         if (res->status == 302)
         {
@@ -185,9 +226,10 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data, con
             {
                 curl_easy_cleanup(curl);
                 curl_slist_free_all(curl_headers);
-                return get(redirect_url, headers);
+                return get(redirect_url, headers, res->cookies);
             }
         }
+
     }
     curl_easy_cleanup(curl);
     curl_slist_free_all(curl_headers);

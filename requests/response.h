@@ -7,15 +7,18 @@
 
 #include <iostream>
 #include <string>
+#include <map>
 
 using namespace std;
 
+typedef map<string, string> Headers;
 
 class Response
 {
 public:
     string text;
-    string response_headers;
+    Headers response_headers;
+    string s_response_headers;
     string cookies;
     string url;
     int curl_code;
