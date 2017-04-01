@@ -41,17 +41,6 @@ string Requests::post_data_to_string(const PostData &post_data)
     return post_str;
 }
 
-vector<string> Requests::string_split(const string &str, const string &sep)
-{
-    vector<string> result;
-    unsigned long pos = 0;
-    while (pos < str.length())
-    {
-        unsigned long index = str.find(sep, pos);
-        if()
-    }
-}
-
 Headers Requests::parser_response_headers(const string &response_headers_str)
 {
     Headers response_headers;
