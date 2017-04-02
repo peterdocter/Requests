@@ -21,13 +21,15 @@ class Requests
 {
 public:
 
-    shared_ptr<Response> get(const string &url, const Headers &headers, string cookies = "");
+    virtual ~Requests();
 
-    shared_ptr<Response> get(const string &url, const string &cookies = "");
+    virtual shared_ptr<Response> get(const string &url, const Headers &headers, string cookies = "");
 
-    shared_ptr<Response> post(const string &url, const PostData &data, string cookies = "");
+    virtual shared_ptr<Response> get(const string &url, string cookies = "");
 
-    shared_ptr<Response>
+    virtual shared_ptr<Response> post(const string &url, const PostData &data, string cookies = "");
+
+    virtual shared_ptr<Response>
     post(const string &url, const PostData &data, const Headers &headers, string cookies = "");
 
 private:

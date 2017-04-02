@@ -83,17 +83,18 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers, st
     if (res->curl_code == CURLE_OK)
     {
         res->response_headers = parser_response_headers(res->s_response_headers);
+        if (res->response_headers.count("Set-Cookie"))
+            res->cookies = res->response_headers["Set-Cookie"];
+        else
+            res->cookies = cookies;
+
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        if (res->status == 302)
+        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &res->redirect_url);
+        if (res->redirect_url != NULL)
         {
-            char *redirect_url = NULL;
-            curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
-            if (redirect_url != NULL)
-            {
-                curl_easy_cleanup(curl);
-                curl_slist_free_all(curl_headers);
-                return get(redirect_url, headers, cookies);
-            }
+            curl_easy_cleanup(curl);
+            curl_slist_free_all(curl_headers);
+            return get(res->redirect_url, headers, res->cookies);
         }
     }
     curl_easy_cleanup(curl);
@@ -123,21 +124,17 @@ shared_ptr<Response> Requests::get(const string &url, string cookies)
     if (res->curl_code == CURLE_OK)
     {
         res->response_headers = parser_response_headers(res->s_response_headers);
+        if (res->response_headers.count("Set-Cookie"))
+            res->cookies = res->response_headers["Set-Cookie"];
+        else
+            res->cookies = cookies;
+
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        if (res->status == 302)
+        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &res->redirect_url);
+        if (res->redirect_url != NULL)
         {
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-            if (res->status == 302)
-            {
-                char *redirect_url = NULL;
-                curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
-                if (redirect_url != NULL)
-                {
-                    curl_easy_cleanup(curl);
-                    return get(redirect_url, cookies);
-                }
-            }
+            curl_easy_cleanup(curl);
+            return get(res->redirect_url, res->cookies);
         }
     }
     curl_easy_cleanup(curl);
@@ -169,16 +166,17 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data, str
     if (res->curl_code == CURLE_OK)
     {
         res->response_headers = parser_response_headers(res->s_response_headers);
+        if (res->response_headers.count("Set-Cookie"))
+            res->cookies = res->response_headers["Set-Cookie"];
+        else
+            res->cookies = cookies;
+
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        if (res->status == 302)
+        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &res->redirect_url);
+        if (res->redirect_url != NULL)
         {
-            char *redirect_url = NULL;
-            curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
-            if (redirect_url != NULL)
-            {
-                curl_easy_cleanup(curl);
-                return get(redirect_url, cookies);
-            }
+            curl_easy_cleanup(curl);
+            return get(res->redirect_url, res->cookies);
         }
     }
     curl_easy_cleanup(curl);
@@ -189,10 +187,12 @@ shared_ptr<Response>
 Requests::post(const string &url, const PostData &data, const Headers &headers, string cookies)
 {
     struct curl_slist *curl_headers = headers_to_curl_headers(headers);
+    string post_str = post_data_to_string(data);
     CURL *curl = curl_easy_init();
+
     shared_ptr<Response> res = make_shared<Response>();
     res->url = url;
-    string post_str = post_data_to_string(data);
+
     if (curl == NULL)
     {
         res->curl_code = -1;
@@ -212,26 +212,25 @@ Requests::post(const string &url, const PostData &data, const Headers &headers, 
     {
         res->response_headers = parser_response_headers(res->s_response_headers);
         if (res->response_headers.count("Set-Cookie"))
-        {
             res->cookies = res->response_headers["Set-Cookie"];
-        } else
+        else
             res->cookies = cookies;
 
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        if (res->status == 302)
+        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &res->redirect_url);
+        if (res->redirect_url != NULL)
         {
-            char *redirect_url = NULL;
-            curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
-            if (redirect_url != NULL)
-            {
-                curl_easy_cleanup(curl);
-                curl_slist_free_all(curl_headers);
-                return get(redirect_url, headers, res->cookies);
-            }
+            curl_easy_cleanup(curl);
+            curl_slist_free_all(curl_headers);
+            return get(res->redirect_url, headers, res->cookies);
         }
-
     }
     curl_easy_cleanup(curl);
     curl_slist_free_all(curl_headers);
     return res;
+}
+
+Requests::~Requests()
+{
+
 }
