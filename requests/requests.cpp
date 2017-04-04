@@ -65,11 +65,14 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers, st
     CURL *curl = curl_easy_init();
     shared_ptr<Response> res = make_shared<Response>();
     res->url = url;
+
     if (curl == NULL)
     {
         res->curl_code = -1;
+        res->error = "Init Curl Failed!";
         return res;
     }
+
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers);
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     if (cookies != "")
@@ -79,6 +82,7 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers, st
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, OnWriteData);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *) &res->text);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *) &res->s_response_headers);
+
     res->curl_code = curl_easy_perform(curl);
     if (res->curl_code == CURLE_OK)
     {
@@ -88,14 +92,19 @@ shared_ptr<Response> Requests::get(const string &url, const Headers &headers, st
         else
             res->cookies = cookies;
 
+        char *redirect_url = NULL;
+
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &res->redirect_url);
-        if (res->redirect_url != NULL)
+        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
+        if (redirect_url != NULL)
         {
             curl_easy_cleanup(curl);
             curl_slist_free_all(curl_headers);
-            return get(res->redirect_url, headers, res->cookies);
+            return get(redirect_url, headers, res->cookies);
         }
+    } else
+    {
+        res->error = curl_easy_strerror((CURLcode) res->curl_code);
     }
     curl_easy_cleanup(curl);
     curl_slist_free_all(curl_headers);
@@ -110,6 +119,7 @@ shared_ptr<Response> Requests::get(const string &url, string cookies)
     if (curl == NULL)
     {
         res->curl_code = -1;
+        res->error = "Init Curl Failed!";
         return res;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -129,13 +139,18 @@ shared_ptr<Response> Requests::get(const string &url, string cookies)
         else
             res->cookies = cookies;
 
+        char *redirect_url = NULL;
+
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &res->redirect_url);
-        if (res->redirect_url != NULL)
+        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
+        if (redirect_url != NULL)
         {
             curl_easy_cleanup(curl);
-            return get(res->redirect_url, res->cookies);
+            return get(redirect_url, res->cookies);
         }
+    } else
+    {
+        res->error = curl_easy_strerror((CURLcode) res->curl_code);
     }
     curl_easy_cleanup(curl);
     return res;
@@ -150,6 +165,7 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data, str
     if (curl == NULL)
     {
         res->curl_code = -1;
+        res->error = "Init Curl Failed!";
         return res;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -171,13 +187,18 @@ shared_ptr<Response> Requests::post(const string &url, const PostData &data, str
         else
             res->cookies = cookies;
 
+        char *redirect_url = NULL;
+
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &res->redirect_url);
-        if (res->redirect_url != NULL)
+        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
+        if (redirect_url != NULL)
         {
             curl_easy_cleanup(curl);
-            return get(res->redirect_url, res->cookies);
+            return get(redirect_url, res->cookies);
         }
+    } else
+    {
+        res->error = curl_easy_strerror((CURLcode) res->curl_code);
     }
     curl_easy_cleanup(curl);
     return res;
@@ -196,6 +217,7 @@ Requests::post(const string &url, const PostData &data, const Headers &headers, 
     if (curl == NULL)
     {
         res->curl_code = -1;
+        res->error = "Init Curl Failed!";
         return res;
     }
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -216,14 +238,19 @@ Requests::post(const string &url, const PostData &data, const Headers &headers, 
         else
             res->cookies = cookies;
 
+        char *redirect_url = NULL;
+
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &res->status);
-        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &res->redirect_url);
-        if (res->redirect_url != NULL)
+        curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &redirect_url);
+        if (redirect_url != NULL)
         {
             curl_easy_cleanup(curl);
             curl_slist_free_all(curl_headers);
-            return get(res->redirect_url, headers, res->cookies);
+            return get(redirect_url, headers, res->cookies);
         }
+    } else
+    {
+        res->error = curl_easy_strerror((CURLcode) res->curl_code);
     }
     curl_easy_cleanup(curl);
     curl_slist_free_all(curl_headers);
